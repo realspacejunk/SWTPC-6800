@@ -59,7 +59,7 @@
                 transparent 2px
             );
             pointer-events: none;
-            z-index: 100;
+            z-index: 10;
         }
 
         .terminal {
@@ -69,7 +69,7 @@
             flex-direction: column;
             overflow: hidden;
             position: relative;
-            z-index: 50;
+            z-index: 20;
             font-size: 13px;
         }
 
@@ -118,6 +118,9 @@
             caret-color: #00ff00;
             text-shadow: 0 0 3px #00ff00;
             width: 100%;
+            pointer-events: all;
+            z-index: 50;
+            position: relative;
         }
 
         #commandInput::placeholder {
@@ -273,36 +276,47 @@
             output.scrollTop = output.scrollHeight;
         }
 
+        // Handle input - attach BEFORE init
+        function setupInput() {
+            commandInput.addEventListener('keypress', (e) => {
+                console.log('Keypress event:', e.key);
+                if (e.key === 'Enter') {
+                    const message = commandInput.value.toUpperCase().trim();
+                    console.log('Message:', message);
+                    
+                    if (message) {
+                        printLine('> ' + message);
+                        
+                        if (emulator) {
+                            emulator.sendInput(message);
+                        }
+                        
+                        commandInput.value = '';
+                    }
+                    
+                    e.preventDefault();
+                }
+            });
+            
+            console.log('Input handler attached');
+        }
+
         // Initialize
         function init() {
-            emulator = new Emulator();
-            emulator.init();
+            try {
+                emulator = new Emulator();
+                emulator.init();
+            } catch (e) {
+                console.error('Emulator init error:', e);
+            }
             
             printLine('SWTPC-6800 ELIZA THERAPIST v1.0');
             printLine('=====================================');
             printLine('');
             
             commandInput.focus();
+            console.log('Input focused, ready');
         }
-
-        // Handle input
-        commandInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const message = commandInput.value.toUpperCase().trim();
-                
-                if (message) {
-                    printLine('> ' + message);
-                    
-                    if (emulator) {
-                        emulator.sendInput(message);
-                    }
-                    
-                    commandInput.value = '';
-                }
-                
-                e.preventDefault();
-            }
-        });
 
         // ELIZA response handler
         window.onELIZAOutput = (text) => {
@@ -322,13 +336,13 @@
             if (!emulator || !emulator.cpu) return;
             const cpu = emulator.cpu;
             let state = '';
-            state += 'PC: $' + cpu.pc.toString(16).padStart(4, '0').toUpperCase() + '\n';
-            state += 'A:  $' + cpu.a.toString(16).padStart(2, '0').toUpperCase() + '\n';
-            state += 'B:  $' + cpu.b.toString(16).padStart(2, '0').toUpperCase() + '\n';
-            state += 'X:  $' + cpu.x.toString(16).padStart(4, '0').toUpperCase() + '\n';
-            state += 'SP: $' + cpu.sp.toString(16).padStart(4, '0').toUpperCase() + '\n';
-            state += 'CC: $' + cpu.cc.toString(16).padStart(2, '0').toUpperCase() + '\n';
-            state += 'Instructions: ' + cpu.instructionCount;
+            state += 'PC: $' + cpu.PC.toString(16).padStart(4, '0').toUpperCase() + '\n';
+            state += 'A:  $' + cpu.A.toString(16).padStart(2, '0').toUpperCase() + '\n';
+            state += 'B:  $' + cpu.B.toString(16).padStart(2, '0').toUpperCase() + '\n';
+            state += 'X:  $' + cpu.X.toString(16).padStart(4, '0').toUpperCase() + '\n';
+            state += 'SP: $' + cpu.SP.toString(16).padStart(4, '0').toUpperCase() + '\n';
+            state += 'CC: $' + cpu.CC.toString(16).padStart(2, '0').toUpperCase() + '\n';
+            state += 'Instructions: ' + (cpu.instructionCount || 0);
             document.getElementById('cpuState').textContent = state;
         }
 
@@ -338,7 +352,8 @@
             }
         }, 100);
 
-        // Start
+        // Setup input handler first, then init
+        setupInput();
         init();
     </script>
 </body>
