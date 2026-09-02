@@ -35,7 +35,13 @@ class Emulator {
      * Setup keyboard input
      */
     setupKeyboardInput() {
-        const inputField = document.getElementById('userInput');
+        const inputField = document.getElementById('commandInput');
+        
+        // If element doesn't exist (not in DOM), skip
+        if (!inputField) {
+            console.log('Warning: commandInput element not found, skipping emulator input handler');
+            return;
+        }
         
         inputField.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
