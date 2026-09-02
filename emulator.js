@@ -53,14 +53,16 @@ class Emulator {
     /**
      * Send user input to ELIZA
      */
-    sendInput() {
-        const inputField = document.getElementById('userInput');
-        const message = inputField.value.trim();
-        
-        if (!message) return;
-        
-        // Add to conversation display
-        this.addConversationLine(message, true);
+    sendInput(message = null) {
+        // Allow passing message as parameter or reading from input field
+        if (!message) {
+            const inputField = document.getElementById('commandInput');
+            if (!inputField) return;
+            message = inputField.value.trim();
+            if (!message) return;
+            inputField.value = '';
+            inputField.focus();
+        }
         
         // Load input into buffer for ELIZA to read
         this.inputBuffer = message.split('').map(c => c.charCodeAt(0));
@@ -68,14 +70,15 @@ class Emulator {
         this.inputBuffer.push(0x0A); // Line feed
         this.inputPtr = 0;
         
-        // Clear input field
-        inputField.value = '';
-        inputField.focus();
-        
-        // Generate ELIZA response
+        // Generate ELIZA response using JavaScript engine
         setTimeout(() => {
             const response = this.eliza.getResponse(message);
-            this.addConversationLine(response, false);
+            if (response) {
+                // Trigger the callback in index.html
+                if (window.onELIZAOutput) {
+                    window.onELIZAOutput(response);
+                }
+            }
         }, 300);
         
         // Start emulator if not running
@@ -88,12 +91,9 @@ class Emulator {
      * Add line to conversation display
      */
     addConversationLine(text, isUser = false) {
-        const conv = document.getElementById('conversation');
-        const line = document.createElement('div');
-        line.className = `conversation-line ${isUser ? 'user-line' : 'eliza-line'}`;
-        line.textContent = text;
-        conv.appendChild(line);
-        conv.scrollTop = conv.scrollHeight;
+        if (window.onELIZAOutput && !isUser) {
+            window.onELIZAOutput(text);
+        }
     }
     
     /**
