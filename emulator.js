@@ -343,13 +343,19 @@ class Emulator {
      * Load program into CPU
      */
     loadProgram() {
+        // Load entire Side B binary into memory starting at 0x0000
+        // This includes all code segments and data tables
         this.cpu.loadProgram(this.elizaBinary, 0);
-        // Side B binary structure:
-        // - 0x00000-0x00068: Bootloader (105 bytes) - unused in emulator
+        
+        // Side B binary structure (all loaded into RAM):
+        // - 0x00000-0x00068: Bootloader (105 bytes) - references ROM at 0xFF8D
         // - 0x000C7-0x005CC: Support routines (1286 bytes)
         // - 0x009B0-0x00C1D: More support code (622 bytes)
         // - 0x012DB-0x07B2B: MAIN ELIZA PROGRAM (26,705 bytes)
-        // Jump to main ELIZA program entry point
+        //
+        // Note: The bootloader at 0x0000 tries to jump to ROM (0xFF8D)
+        // In the HTML emulator, we skip this and jump directly to the main
+        // ELIZA program which contains the real AI engine.
         this.cpu.PC = 0x12DB;
     }
     
