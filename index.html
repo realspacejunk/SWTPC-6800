@@ -3,452 +3,459 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SWTPC-6800 ELIZA - Interactive Chatbot</title>
+    <title>SWTPC-6800 ELIZA</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #000;
             font-family: 'Courier New', monospace;
-            background: #1e1e1e;
-            color: #d4d4d4;
             padding: 20px;
         }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        
-        h1 {
-            color: #4ec9b0;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        
-        .controls {
+
+        /* CRT Monitor Bezel */
+        .crt-bezel {
+            width: 100%;
+            max-width: 960px;
+            aspect-ratio: 4 / 3;
+            background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
+            border: 30px solid #2a2a2a;
+            border-radius: 20px;
+            box-shadow: 
+                0 0 60px rgba(0, 0, 0, 0.8),
+                inset 0 0 60px rgba(0, 0, 0, 0.8),
+                0 20px 40px rgba(0, 0, 0, 0.9);
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            background: #252526;
-            padding: 15px;
-            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
         }
-        
-        button {
-            padding: 10px 20px;
-            background: #007acc;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: monospace;
-            font-size: 12px;
+
+        /* CRT Screen */
+        .crt-screen {
+            flex: 1;
+            background-color: #000;
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            overflow: hidden;
+            position: relative;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff0088;
+            line-height: 1.4;
+            font-size: clamp(11px, 2vw, 16px);
         }
-        
-        button:hover {
-            background: #1084d7;
+
+        /* Scanlines effect */
+        .crt-screen::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+            z-index: 100;
         }
-        
-        button:disabled {
-            background: #555;
-            cursor: not-allowed;
+
+        /* Phosphor glow */
+        .crt-screen::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
+            pointer-events: none;
+            z-index: 101;
         }
-        
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
+
+        /* Content wrapper */
+        .crt-content {
+            position: relative;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            color: #00ff00;
         }
-        
-        .panel {
-            background: #252526;
-            border: 1px solid #3e3e42;
-            border-radius: 5px;
-            padding: 15px;
-        }
-        
-        .panel h2 {
-            color: #4ec9b0;
-            font-size: 14px;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #3e3e42;
-            padding-bottom: 8px;
-        }
-        
-        .register-display {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+
+        /* Header */
+        .crt-header {
+            text-align: center;
             margin-bottom: 15px;
-        }
-        
-        .register {
-            background: #1e1e1e;
-            padding: 8px;
-            border-left: 3px solid #007acc;
-            font-size: 12px;
-        }
-        
-        .register-name {
-            color: #ce9178;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 10px;
             font-weight: bold;
+            letter-spacing: 2px;
         }
-        
-        .register-value {
-            color: #b5cea8;
-            margin-top: 2px;
-            font-size: 11px;
+
+        .crt-header h1 {
+            font-size: 1.2em;
+            margin: 0;
+            color: #00ff00;
         }
-        
-        .flags {
-            background: #1e1e1e;
-            padding: 8px;
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 5px;
-            margin-bottom: 15px;
-            border-left: 3px solid #007acc;
+
+        .crt-header p {
+            font-size: 0.8em;
+            opacity: 0.7;
+            margin: 5px 0 0 0;
         }
-        
-        .flag {
-            text-align: center;
-            padding: 4px;
-            font-size: 11px;
-        }
-        
-        .flag.set {
-            background: #155724;
-            color: #7cff00;
-        }
-        
-        .flag.clear {
-            background: #3c1414;
-            color: #999;
-        }
-        
-        .disassembly {
-            background: #1e1e1e;
-            border: 1px solid #3e3e42;
-            border-radius: 3px;
-            padding: 8px;
-            font-size: 11px;
-            max-height: 400px;
+
+        /* Conversation area */
+        .crt-conversation {
+            flex: 1;
             overflow-y: auto;
-            line-height: 1.6;
+            margin-bottom: 10px;
+            padding-right: 5px;
+            scrollbar-width: thin;
+            scrollbar-color: #00ff00 #000;
         }
-        
-        .disasm-line {
-            padding: 2px 4px;
-            margin: 1px 0;
+
+        .crt-conversation::-webkit-scrollbar {
+            width: 4px;
         }
-        
-        .disasm-line.current {
-            background: #264f78;
-            color: #ffff00;
-            padding-left: 8px;
+
+        .crt-conversation::-webkit-scrollbar-track {
+            background: #000;
         }
-        
-        .disasm-addr {
-            color: #858585;
-            display: inline-block;
-            width: 40px;
+
+        .crt-conversation::-webkit-scrollbar-thumb {
+            background: #00ff00;
         }
-        
-        .disasm-bytes {
-            color: #a0a0a0;
-            display: inline-block;
-            width: 80px;
-        }
-        
-        .disasm-instr {
-            color: #569cd6;
-            display: inline-block;
-            width: 60px;
-        }
-        
-        .disasm-operand {
-            color: #ce9178;
-        }
-        
-        .memory-grid {
-            display: grid;
-            grid-template-columns: repeat(16, 1fr);
-            gap: 1px;
-            background: #3e3e42;
-            padding: 8px;
-            margin-top: 10px;
-        }
-        
-        .memory-cell {
-            background: #1e1e1e;
-            padding: 3px;
-            text-align: center;
-            font-size: 10px;
-            color: #b5cea8;
-        }
-        
-        .memory-cell.modified {
-            background: #264f78;
-            color: #ffff00;
-        }
-        
-        .output-panel {
-            background: #1e1e1e;
-            border: 1px solid #3e3e42;
-            border-radius: 3px;
-            padding: 10px;
-            font-size: 12px;
-            max-height: 200px;
-            overflow-y: auto;
+
+        /* Conversation lines */
+        .crt-line {
+            margin: 3px 0;
             white-space: pre-wrap;
             word-wrap: break-word;
         }
-        
-        .output-line {
-            padding: 2px 0;
-            color: #7cff00;
+
+        .crt-line.system {
+            opacity: 0.7;
+            font-style: italic;
         }
-        
-        .speed-control {
+
+        .crt-line.user {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .crt-line.eliza {
+            color: #00ff00;
+        }
+
+        .crt-line.prompt {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        /* Blinking cursor */
+        .crt-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 1em;
+            background-color: #00ff00;
+            animation: blink 0.7s infinite;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+
+        /* Input section */
+        .crt-input-area {
+            border-top: 1px solid #00ff00;
+            padding-top: 10px;
             display: flex;
-            align-items: center;
-            gap: 10px;
+            gap: 5px;
         }
-        
-        .speed-control label {
-            font-size: 12px;
+
+        .crt-input-area span {
+            color: #00ff00;
+            font-weight: bold;
+            flex-shrink: 0;
         }
-        
-        .speed-control input {
-            width: 150px;
-        }
-        
-        .speed-value {
-            font-size: 12px;
-            color: #b5cea8;
-            min-width: 50px;
-        }
-        
-        .stats {
-            font-size: 11px;
-            color: #858585;
-            margin-top: 10px;
-            padding: 10px;
-            background: #1e1e1e;
-            border-left: 3px solid #007acc;
-        }
-        
-        .widescreen {
-            grid-template-columns: 1fr;
-        }
-        
-        .input-section {
-            background: #252526;
-            border: 1px solid #3e3e42;
-            border-radius: 5px;
-            padding: 15px;
-            margin-top: 20px;
-        }
-        
-        .input-section h2 {
-            color: #4ec9b0;
-            font-size: 14px;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #3e3e42;
-            padding-bottom: 8px;
-        }
-        
+
         #userInput {
-            width: 100%;
-            padding: 10px;
-            background: #1e1e1e;
-            border: 1px solid #3e3e42;
-            border-radius: 3px;
-            color: #d4d4d4;
-            font-family: monospace;
-            font-size: 12px;
-            margin-bottom: 10px;
-        }
-        
-        #userInput:focus {
-            outline: none;
-            border-color: #007acc;
-            box-shadow: 0 0 5px rgba(0, 122, 204, 0.3);
-        }
-        
-        .input-button {
-            padding: 8px 16px;
-            background: #28a745;
-            color: white;
+            flex: 1;
+            background: transparent;
             border: none;
-            border-radius: 4px;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            outline: none;
+            font-size: inherit;
+        }
+
+        #userInput::placeholder {
+            color: #00ff00;
+            opacity: 0.5;
+        }
+
+        #userInput:focus {
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        /* Dev mode toggle */
+        .dev-toggle {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            padding: 5px 10px;
+            background-color: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            opacity: 0.5;
+            z-index: 1000;
+        }
+
+        .dev-toggle:hover {
+            opacity: 1;
+        }
+
+        /* Hidden dev panels */
+        .dev-panels {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #000;
+            z-index: 999;
+            overflow: auto;
+            padding: 10px;
+            color: #00ff00;
+        }
+
+        .dev-panels.visible {
+            display: block;
+        }
+
+        .dev-panel {
+            border: 1px solid #00ff00;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #0a0a0a;
+        }
+
+        .dev-panel h3 {
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .dev-close {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            background-color: #003300;
+            color: #00ff00;
+            border: 1px solid #00ff00;
             cursor: pointer;
             font-family: monospace;
-            font-size: 12px;
+            z-index: 1000;
         }
-        
-        .input-button:hover {
-            background: #218838;
-        }
-        
-        .input-button:active {
-            background: #1e7e34;
-        }
-        
-        .conversation {
-            background: #1e1e1e;
-            border: 1px solid #3e3e42;
-            border-radius: 3px;
-            padding: 10px;
-            max-height: 300px;
-            overflow-y: auto;
-            line-height: 1.6;
-            font-size: 12px;
-        }
-        
-        .conversation-line {
-            margin: 3px 0;
-            padding: 2px 4px;
-        }
-        
-        .user-line {
-            color: #4ec9b0;
-            padding-left: 10px;
-        }
-        
-        .user-line::before {
-            content: "YOU: ";
-            color: #007acc;
-            font-weight: bold;
-        }
-        
-        .eliza-line {
-            color: #ce9178;
-            padding-left: 10px;
-        }
-        
-        .eliza-line::before {
-            content: "ELIZA: ";
-            color: #7cff00;
-            font-weight: bold;
-        }
-        
-        @media (max-width: 900px) {
-            .grid {
-                grid-template-columns: 1fr;
-            }
+
+        .dev-close:hover {
+            background-color: #00ff00;
+            color: #000;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🖥️ SWTPC-6800 ELIZA Emulator</h1>
-        
-        <div class="controls">
-            <button id="runBtn" onclick="emulator.run()">Run</button>
-            <button id="pauseBtn" onclick="emulator.pause()" disabled>Pause</button>
-            <button id="stepBtn" onclick="emulator.step()">Step</button>
-            <button id="resetBtn" onclick="emulator.reset()">Reset</button>
-            
-            <div class="speed-control">
-                <label for="speedSlider">Speed:</label>
-                <input type="range" id="speedSlider" min="1" max="100" value="50" 
-                       onchange="emulator.setSpeed(this.value)">
-                <span class="speed-value" id="speedValue">50%</span>
-            </div>
-        </div>
-        
-        <div class="grid">
-            <!-- Left Column -->
-            <div>
-                <!-- CPU State -->
-                <div class="panel">
-                    <h2>CPU State (Motorola 6800)</h2>
-                    <div class="register-display">
-                        <div class="register">
-                            <div class="register-name">ACC A</div>
-                            <div class="register-value" id="regA">0x00</div>
-                        </div>
-                        <div class="register">
-                            <div class="register-name">ACC B</div>
-                            <div class="register-value" id="regB">0x00</div>
-                        </div>
-                        <div class="register">
-                            <div class="register-name">Index X</div>
-                            <div class="register-value" id="regX">0x0000</div>
-                        </div>
-                        <div class="register">
-                            <div class="register-name">Program Counter</div>
-                            <div class="register-value" id="regPC">0x0000</div>
-                        </div>
-                        <div class="register">
-                            <div class="register-name">Stack Pointer</div>
-                            <div class="register-value" id="regSP">0x7FFF</div>
-                        </div>
-                        <div class="register">
-                            <div class="register-name">Cycles</div>
-                            <div class="register-value" id="regCycles">0</div>
-                        </div>
-                    </div>
-                    
-                    <div class="flags" id="flags">
-                        <div class="flag clear"><span class="register-name">H</span><br>Halt</div>
-                        <div class="flag clear"><span class="register-name">I</span><br>IRQ</div>
-                        <div class="flag clear"><span class="register-name">N</span><br>Neg</div>
-                        <div class="flag clear"><span class="register-name">Z</span><br>Zero</div>
-                        <div class="flag clear"><span class="register-name">V</span><br>Ovf</div>
-                        <div class="flag clear"><span class="register-name">C</span><br>Carry</div>
-                    </div>
-                    
-                    <div class="stats">
-                        <div>Instructions: <span id="instCount">0</span></div>
-                        <div>Clock: <span id="clockCount">0</span> MHz</div>
-                        <div>Status: <span id="status">Idle</span></div>
-                    </div>
+    <!-- CRT Monitor Display -->
+    <div class="crt-bezel">
+        <div class="crt-screen">
+            <div class="crt-content">
+                <div class="crt-header">
+                    <h1>SWTPC-6800 ELIZA</h1>
+                    <p>Therapist v1.0</p>
                 </div>
-                
-                <!-- Memory Viewer -->
-                <div class="panel" style="margin-top: 20px;">
-                    <h2>Memory (0x0000 - 0x00FF)</h2>
-                    <div class="memory-grid" id="memoryGrid"></div>
+
+                <div class="crt-conversation" id="conversationLog">
+                    <div class="crt-line system">Welcome to ELIZA on SWTPC-6800</div>
+                    <div class="crt-line system">-----------------------------------</div>
                 </div>
-            </div>
-            
-            <!-- Right Column -->
-            <div>
-                <!-- Disassembly -->
-                <div class="panel">
-                    <h2>Disassembly &amp; Execution</h2>
-                    <div class="disassembly" id="disassembly"></div>
-                </div>
-                
-                <!-- Output Console -->
-                <div class="panel" style="margin-top: 20px;">
-                    <h2>Program Output</h2>
-                    <div class="output-panel" id="output"></div>
+
+                <div class="crt-input-area">
+                    <span>YOU:</span>
+                    <input type="text" id="userInput" placeholder="your thoughts">
+                    <span id="cursor" class="crt-cursor"></span>
                 </div>
             </div>
         </div>
-        
-        <!-- ELIZA Conversation Interface -->
-        <div class="input-section">
-            <h2>💬 ELIZA Conversation</h2>
-            <div class="conversation" id="conversation"></div>
-            <div style="display: flex; gap: 10px;">
-                <input type="text" id="userInput" placeholder="Type your message here..." autofocus>
-                <button class="input-button" onclick="emulator.sendInput()">Send (Enter)</button>
-            </div>
+    </div>
+
+    <!-- Developer Mode Toggle -->
+    <button class="dev-toggle" onclick="toggleDevMode()">DEV</button>
+
+    <!-- Hidden Developer Panels -->
+    <div class="dev-panels" id="devPanels">
+        <button class="dev-close" onclick="toggleDevMode()">CLOSE DEV</button>
+
+        <div class="dev-panel">
+            <h3>CPU Controls</h3>
+            <button onclick="emulator.run()">▶ Run</button>
+            <button onclick="emulator.pause()">⏸ Pause</button>
+            <button onclick="emulator.step()">⏭ Step</button>
+            <button onclick="emulator.reset()">🔄 Reset</button>
+            <label>Speed: <input type="range" id="speedSlider" min="1" max="100" value="50" style="width: 100px;"></label>
+        </div>
+
+        <div class="dev-panel">
+            <h3>CPU State</h3>
+            <div id="cpuState" style="font-size: 11px; font-family: monospace;"></div>
+        </div>
+
+        <div class="dev-panel">
+            <h3>Memory (0x00-0xFF)</h3>
+            <div id="memoryGrid" style="display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; font-size: 9px;"></div>
+        </div>
+
+        <div class="dev-panel">
+            <h3>Disassembly</h3>
+            <div id="disassembly" style="font-size: 10px; max-height: 200px; overflow-y: auto;"></div>
         </div>
     </div>
 
     <script src="cpu6800.js"></script>
     <script src="eliza.js"></script>
     <script src="emulator.js"></script>
+    <script>
+        const emulator = new Emulator();
+        emulator.init();
+
+        const conversationLog = document.getElementById('conversationLog');
+        const userInput = document.getElementById('userInput');
+        const cursor = document.getElementById('cursor');
+
+        // Hide cursor when typing
+        userInput.addEventListener('focus', () => {
+            cursor.style.display = 'none';
+        });
+
+        userInput.addEventListener('blur', () => {
+            cursor.style.display = 'inline-block';
+        });
+
+        // Speed control
+        const speedSlider = document.getElementById('speedSlider');
+        if (speedSlider) {
+            speedSlider.addEventListener('change', (e) => {
+                const speed = parseInt(e.target.value);
+                emulator.setSpeed(speed);
+            });
+        }
+
+        function sendMessage() {
+            const message = userInput.value.trim();
+            if (message) {
+                addConversationLine('user', message);
+                emulator.sendInput(message);
+                userInput.value = '';
+                userInput.focus();
+            }
+        }
+
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        function addConversationLine(role, text) {
+            const line = document.createElement('div');
+            line.className = `crt-line ${role}`;
+            
+            if (role === 'user') {
+                line.textContent = `YOU: ${text}`;
+            } else if (role === 'eliza') {
+                line.textContent = `ELIZA: ${text}`;
+            } else {
+                line.textContent = text;
+                line.classList.add('system');
+            }
+            
+            conversationLog.appendChild(line);
+            conversationLog.scrollTop = conversationLog.scrollHeight;
+        }
+
+        // ELIZA output handler
+        window.onELIZAOutput = (text) => {
+            addConversationLine('eliza', text);
+        };
+
+        // Dev mode toggle
+        function toggleDevMode() {
+            const devPanels = document.getElementById('devPanels');
+            devPanels.classList.toggle('visible');
+        }
+
+        // Auto-focus input
+        setTimeout(() => {
+            userInput.focus();
+        }, 100);
+
+        // Update dev panels
+        setInterval(() => {
+            if (document.getElementById('devPanels').classList.contains('visible')) {
+                updateDevPanels();
+            }
+        }, 100);
+
+        function updateDevPanels() {
+            // CPU State
+            const cpu = emulator.cpu;
+            document.getElementById('cpuState').innerHTML = `
+PC: $${cpu.pc.toString(16).padStart(4, '0')} | 
+A: $${cpu.a.toString(16).padStart(2, '0')} | 
+B: $${cpu.b.toString(16).padStart(2, '0')} | 
+X: $${cpu.x.toString(16).padStart(4, '0')}<br>
+SP: $${cpu.sp.toString(16).padStart(4, '0')} | 
+CC: $${cpu.cc.toString(16).padStart(2, '0')} | 
+Instructions: ${cpu.instructionCount}
+            `;
+
+            // Memory grid
+            const memoryGrid = document.getElementById('memoryGrid');
+            if (memoryGrid.children.length === 0) {
+                for (let i = 0; i < 256; i++) {
+                    const cell = document.createElement('div');
+                    cell.style.border = '1px solid #003300';
+                    cell.style.padding = '2px';
+                    cell.style.textAlign = 'center';
+                    cell.id = `mem-${i}`;
+                    memoryGrid.appendChild(cell);
+                }
+            }
+            for (let i = 0; i < 256; i++) {
+                const cell = document.getElementById(`mem-${i}`);
+                if (cell) {
+                    cell.textContent = emulator.cpu.memory[i].toString(16).padStart(2, '0');
+                }
+            }
+        }
+    </script>
 </body>
 </html>
