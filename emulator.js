@@ -14,11 +14,71 @@ class Emulator {
         // Embed the binary data from ELIZA tape
         this.elizaBinary = this.getELIZABinary();
         
+        // Input handling
+        this.inputBuffer = [];
+        this.inputPtr = 0;
+        this.conversation = [];
+        this.currentOutput = '';
+        
         // Prepare disassembly
         this.generateDisassembly();
         
         // Setup handlers
         this.setupExternalCallHandler();
+        this.setupKeyboardInput();
+    }
+    
+    /**
+     * Setup keyboard input
+     */
+    setupKeyboardInput() {
+        const inputField = document.getElementById('userInput');
+        
+        inputField.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.sendInput();
+            }
+        });
+    }
+    
+    /**
+     * Send user input to ELIZA
+     */
+    sendInput() {
+        const inputField = document.getElementById('userInput');
+        const message = inputField.value.trim();
+        
+        if (!message) return;
+        
+        // Add to conversation display
+        this.addConversationLine(message, true);
+        
+        // Load input into buffer for ELIZA to read
+        this.inputBuffer = message.split('').map(c => c.charCodeAt(0));
+        this.inputBuffer.push(0x0D); // Carriage return
+        this.inputBuffer.push(0x0A); // Line feed
+        this.inputPtr = 0;
+        
+        // Clear input field
+        inputField.value = '';
+        inputField.focus();
+        
+        // Start emulator if not running
+        if (!this.running && !this.cpu.halted) {
+            this.run();
+        }
+    }
+    
+    /**
+     * Add line to conversation display
+     */
+    addConversationLine(text, isUser = false) {
+        const conv = document.getElementById('conversation');
+        const line = document.createElement('div');
+        line.className = `conversation-line ${isUser ? 'user-line' : 'eliza-line'}`;
+        line.textContent = text;
+        conv.appendChild(line);
+        conv.scrollTop = conv.scrollHeight;
     }
     
     /**
@@ -88,39 +148,85 @@ class Emulator {
         // Mock SWTPC monitor functions
         const A = this.cpu.A;
         const B = this.cpu.B;
+        const X = this.cpu.X;
         
         switch(A) {
+            case 0x01:  // Read character from input
+                if (this.inputPtr < this.inputBuffer.length) {
+                    this.cpu.A = this.inputBuffer[this.inputPtr];
+                    this.inputPtr++;
+                    this.cpu.Z = 0;  // Not at end
+                } else {
+                    this.cpu.A = 0;
+                    this.cpu.Z = 1;  // At end
+                }
+                break;
+                
+            case 0x02:  // Write character to output
+                const char = String.fromCharCode(B);
+                this.currentOutput += char;
+                this.writeToConsole(char);
+                
+                // Check for line breaks
+                if (char === '\n' || char === '\r') {
+                    if (this.currentOutput.trim().length > 0) {
+                        this.addConversationLine(this.currentOutput.trim(), false);
+                    }
+                    this.currentOutput = '';
+                }
+                break;
+                
+            case 0x03:  // Flush output
+                if (this.currentOutput.trim().length > 0) {
+                    this.addConversationLine(this.currentOutput.trim(), false);
+                    this.currentOutput = '';
+                }
+                break;
+                
             case 0x20:  // Print character in B
                 this.print(String.fromCharCode(B));
                 break;
+                
             case 0x21:  // Print string at X
-                let addr = this.cpu.X;
-                while (this.cpu.readByte(addr) !== 0) {
-                    this.print(String.fromCharCode(this.cpu.readByte(addr)));
+                let addr = X;
+                let output = '';
+                while (this.cpu.readByte(addr) !== 0 && addr < 0x10000) {
+                    const byte = this.cpu.readByte(addr);
+                    if (byte > 0 && byte < 128) {
+                        output += String.fromCharCode(byte);
+                    }
                     addr++;
                 }
+                this.print(output);
                 break;
+                
             case 0x30:  // Read from cassette
-                // Simulate reading
+                if (this.inputPtr < this.inputBuffer.length) {
+                    this.cpu.A = this.inputBuffer[this.inputPtr];
+                    this.inputPtr++;
+                }
                 break;
+                
             case 0x31:  // Write to cassette
-                // Simulate writing
+                this.print(String.fromCharCode(B));
                 break;
         }
         
-        // Mock: Return immediately
+        // Return immediately (mock - no delay)
         this.cpu.PC = this.cpu.pullWord();
     }
     
     /**
-     * Print to output console
+     * Write to console (internal)
      */
-    print(text) {
+    writeToConsole(text) {
         const output = document.getElementById('output');
-        const line = document.createElement('div');
-        line.className = 'output-line';
-        line.textContent += text;
-        output.appendChild(line);
+        if (!output.lastChild || output.lastChild.className !== 'output-line') {
+            const line = document.createElement('div');
+            line.className = 'output-line';
+            output.appendChild(line);
+        }
+        output.lastChild.textContent += text;
         output.scrollTop = output.scrollHeight;
     }
     
@@ -316,6 +422,18 @@ class Emulator {
     }
     
     /**
+     * Print to output console
+     */
+    print(text) {
+        const output = document.getElementById('output');
+        const line = document.createElement('div');
+        line.className = 'output-line';
+        line.textContent += text;
+        output.appendChild(line);
+        output.scrollTop = output.scrollHeight;
+    }
+    
+    /**
      * Reset CPU
      */
     reset() {
@@ -323,7 +441,13 @@ class Emulator {
         this.cpu = new CPU6800();
         this.setupExternalCallHandler();
         this.lastModifiedAddrs.clear();
+        this.inputBuffer = [];
+        this.inputPtr = 0;
+        this.conversation = [];
+        this.currentOutput = '';
         document.getElementById('output').innerHTML = '';
+        document.getElementById('conversation').innerHTML = '';
+        document.getElementById('userInput').focus();
         this.updateDisplay();
     }
     
@@ -441,10 +565,21 @@ class Emulator {
         document.getElementById('clockCount').textContent = (this.cpu.cycles / 1000000).toFixed(2);
         document.getElementById('status').textContent = this.cpu.halted ? 'Halted' : (this.running ? 'Running' : 'Paused');
     }
+    
+    /**
+     * Initialize ELIZA greeting
+     */
+    initializeELIZA() {
+        const greeting = "ELIZA v1.0 - Type your message and press Enter\n" +
+                        "Type 'quit' to exit\n\n" +
+                        "Hello. I am ELIZA. How are you feeling today?";
+        this.addConversationLine(greeting, false);
+    }
 }
 
 // Initialize emulator on page load
 window.addEventListener('DOMContentLoaded', () => {
     window.emulator = new Emulator();
     window.emulator.updateDisplay();
+    window.emulator.initializeELIZA();
 });
