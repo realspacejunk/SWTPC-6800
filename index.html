@@ -324,8 +324,10 @@
             try {
                 printLine('DEBUG: Creating emulator...');
                 emulator = new Emulator();
-                printLine('DEBUG: Initializing emulator...');
-                emulator.init();
+                printLine('DEBUG: Loading program...');
+                emulator.loadProgram();
+                printLine('DEBUG: Starting CPU execution...');
+                emulator.run();
                 printLine('DEBUG: Emulator ready');
             } catch (e) {
                 printLine('ERROR: ' + e.message);
