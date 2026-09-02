@@ -22,14 +22,12 @@
             font-family: 'Courier New', 'Courier', 'Monaco', monospace;
             font-size: 14px;
             line-height: 1.4;
-            letter-spacing: 0px;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
         }
 
-        /* CRT Screen Container */
         .crt-monitor {
             width: 100%;
             max-width: 800px;
@@ -46,7 +44,6 @@
             position: relative;
         }
 
-        /* Scanlines effect */
         .crt-monitor::before {
             content: '';
             position: absolute;
@@ -65,7 +62,6 @@
             z-index: 100;
         }
 
-        /* Screen content */
         .terminal {
             flex: 1;
             padding: 20px;
@@ -75,11 +71,8 @@
             position: relative;
             z-index: 50;
             font-size: 13px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
         }
 
-        /* Terminal output area */
         .terminal-output {
             flex: 1;
             overflow-y: auto;
@@ -87,6 +80,7 @@
             color: #00ff00;
             text-shadow: 0 0 3px #00ff00;
             line-height: 1.5;
+            font-size: 13px;
         }
 
         .terminal-output::-webkit-scrollbar {
@@ -98,17 +92,19 @@
             background: #003300;
         }
 
-        /* Input line */
         .terminal-input {
             display: flex;
             color: #00ff00;
             text-shadow: 0 0 3px #00ff00;
+            align-items: center;
+            gap: 4px;
         }
 
         .prompt {
             color: #00ff00;
             flex-shrink: 0;
             user-select: none;
+            font-weight: normal;
         }
 
         #commandInput {
@@ -121,37 +117,26 @@
             font-size: 13px;
             caret-color: #00ff00;
             text-shadow: 0 0 3px #00ff00;
+            width: 100%;
         }
 
-        #commandInput::selection {
-            background: #003300;
+        #commandInput::placeholder {
             color: #00ff00;
+            opacity: 0.3;
         }
 
-        /* Text output classes */
         .output-line {
             line-height: 1.5;
             margin: 0;
-        }
-
-        .output-line.command {
-            font-weight: bold;
-            color: #00ff00;
-        }
-
-        .output-line.response {
-            color: #00ff00;
-            margin-top: 2px;
-            margin-bottom: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
 
         .output-line.system {
-            color: #00ff00;
             opacity: 0.7;
             font-style: italic;
         }
 
-        /* Dev button - hidden in corner */
         .dev-button {
             position: fixed;
             bottom: 5px;
@@ -171,7 +156,6 @@
             opacity: 0.6;
         }
 
-        /* Dev overlay */
         .dev-overlay {
             display: none;
             position: fixed;
@@ -207,11 +191,7 @@
             color: #00ff00;
         }
 
-        .dev-button-group {
-            margin-bottom: 10px;
-        }
-
-        .dev-button-group button {
+        .dev-section button {
             padding: 4px 8px;
             background-color: #001100;
             color: #00ff00;
@@ -223,7 +203,7 @@
             opacity: 0.7;
         }
 
-        .dev-button-group button:hover {
+        .dev-section button:hover {
             opacity: 1;
             border-color: #00ff00;
         }
@@ -243,49 +223,34 @@
 
         .dev-close:hover {
             border-color: #00ff00;
-            opacity: 1;
         }
     </style>
 </head>
 <body>
-    <!-- Main CRT Terminal -->
     <div class="crt-monitor">
         <div class="terminal">
-            <div class="terminal-output" id="output">
-            </div>
+            <div class="terminal-output" id="output"></div>
             <div class="terminal-input">
                 <span class="prompt">> </span>
-                <input type="text" id="commandInput" autocomplete="off" spellcheck="false">
+                <input type="text" id="commandInput" autocomplete="off" spellcheck="false" placeholder="">
             </div>
         </div>
     </div>
 
-    <!-- Hidden dev button -->
     <button class="dev-button" onclick="toggleDev()">DEV</button>
 
-    <!-- Dev overlay -->
     <div class="dev-overlay" id="devOverlay">
         <button class="dev-close" onclick="toggleDev()">CLOSE</button>
-
         <div class="dev-section">
             <h3>CPU CONTROLS</h3>
-            <div class="dev-button-group">
-                <button onclick="emulator.run()">RUN</button>
-                <button onclick="emulator.pause()">PAUSE</button>
-                <button onclick="emulator.step()">STEP</button>
-                <button onclick="emulator.reset()">RESET</button>
-            </div>
-            <label>Speed: <input type="range" id="speedSlider" min="1" max="100" value="50" style="width: 100px; vertical-align: middle;"></label>
+            <button onclick="emulator.run()">RUN</button>
+            <button onclick="emulator.pause()">PAUSE</button>
+            <button onclick="emulator.step()">STEP</button>
+            <button onclick="emulator.reset()">RESET</button>
         </div>
-
         <div class="dev-section">
             <h3>CPU STATE</h3>
             <div id="cpuState"></div>
-        </div>
-
-        <div class="dev-section">
-            <h3>MEMORY (0x00-0xFF)</h3>
-            <div id="memoryGrid" style="display: grid; grid-template-columns: repeat(16, 1fr); gap: 1px; font-size: 9px;"></div>
         </div>
     </div>
 
@@ -299,135 +264,82 @@
 
         let emulator = null;
 
-        // Initialize immediately
-        function initializeTerminal() {
-            if (!output || !commandInput) return;
-            
-            emulator = new Emulator();
-            emulator.init();
-            
-            // Print header
-            printOutput('SWTPC-6800 ELIZA THERAPIST v1.0', 'system');
-            printOutput('=====================================', 'system');
-            printOutput('', 'system');
-            
-            // Focus input
-            commandInput.focus();
-            
-            // Start emulator running
-            emulator.run();
-        }
-
-        // Handle input
-        if (commandInput) {
-            commandInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    const command = commandInput.value.toUpperCase().trim();
-                    
-                    if (command) {
-                        // Echo user input
-                        printOutput('> ' + command, 'command');
-                        
-                        // Send to ELIZA
-                        if (emulator) {
-                            emulator.sendInput(command);
-                        }
-                        
-                        // Clear input
-                        commandInput.value = '';
-                    }
-                    
-                    e.preventDefault();
-                }
-            });
-        }
-
-        function printOutput(text, type = 'response') {
-            if (!output) return;
+        // Print line to output
+        function printLine(text) {
             const line = document.createElement('div');
-            line.className = 'output-line ' + type;
+            line.className = 'output-line';
             line.textContent = text;
             output.appendChild(line);
             output.scrollTop = output.scrollHeight;
         }
 
-        // ELIZA output handler
+        // Initialize
+        function init() {
+            emulator = new Emulator();
+            emulator.init();
+            
+            printLine('SWTPC-6800 ELIZA THERAPIST v1.0');
+            printLine('=====================================');
+            printLine('');
+            
+            commandInput.focus();
+        }
+
+        // Handle input
+        commandInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const message = commandInput.value.toUpperCase().trim();
+                
+                if (message) {
+                    printLine('> ' + message);
+                    
+                    if (emulator) {
+                        emulator.sendInput(message);
+                    }
+                    
+                    commandInput.value = '';
+                }
+                
+                e.preventDefault();
+            }
+        });
+
+        // ELIZA response handler
         window.onELIZAOutput = (text) => {
-            // Convert to uppercase for authentic 70s look
-            const elizaText = text.toUpperCase();
-            printOutput(elizaText, 'response');
-            printOutput('', 'system');
+            printLine(text.toUpperCase());
+            printLine('');
         };
 
-        // Dev mode toggle
+        // Dev mode
         function toggleDev() {
             devOverlay.classList.toggle('active');
             if (devOverlay.classList.contains('active')) {
-                updateDevDisplay();
+                updateDev();
             }
         }
 
-        // Update dev display
+        function updateDev() {
+            if (!emulator || !emulator.cpu) return;
+            const cpu = emulator.cpu;
+            let state = '';
+            state += 'PC: $' + cpu.pc.toString(16).padStart(4, '0').toUpperCase() + '\n';
+            state += 'A:  $' + cpu.a.toString(16).padStart(2, '0').toUpperCase() + '\n';
+            state += 'B:  $' + cpu.b.toString(16).padStart(2, '0').toUpperCase() + '\n';
+            state += 'X:  $' + cpu.x.toString(16).padStart(4, '0').toUpperCase() + '\n';
+            state += 'SP: $' + cpu.sp.toString(16).padStart(4, '0').toUpperCase() + '\n';
+            state += 'CC: $' + cpu.cc.toString(16).padStart(2, '0').toUpperCase() + '\n';
+            state += 'Instructions: ' + cpu.instructionCount;
+            document.getElementById('cpuState').textContent = state;
+        }
+
         setInterval(() => {
-            if (devOverlay.classList.contains('active') && emulator && emulator.cpu) {
-                updateDevDisplay();
+            if (devOverlay.classList.contains('active')) {
+                updateDev();
             }
         }, 100);
 
-        function updateDevDisplay() {
-            if (!emulator || !emulator.cpu) return;
-            
-            const cpu = emulator.cpu;
-            
-            // CPU State
-            let stateText = '';
-            stateText += 'PC: $' + cpu.pc.toString(16).padStart(4, '0').toUpperCase() + '\n';
-            stateText += 'A:  $' + cpu.a.toString(16).padStart(2, '0').toUpperCase() + '\n';
-            stateText += 'B:  $' + cpu.b.toString(16).padStart(2, '0').toUpperCase() + '\n';
-            stateText += 'X:  $' + cpu.x.toString(16).padStart(4, '0').toUpperCase() + '\n';
-            stateText += 'SP: $' + cpu.sp.toString(16).padStart(4, '0').toUpperCase() + '\n';
-            stateText += 'CC: $' + cpu.cc.toString(16).padStart(2, '0').toUpperCase() + '\n';
-            stateText += 'Instructions: ' + cpu.instructionCount;
-            document.getElementById('cpuState').textContent = stateText;
-
-            // Memory grid
-            const memoryGrid = document.getElementById('memoryGrid');
-            if (memoryGrid.children.length === 0) {
-                for (let i = 0; i < 256; i++) {
-                    const cell = document.createElement('div');
-                    cell.style.border = '1px solid #003300';
-                    cell.style.padding = '2px';
-                    cell.style.textAlign = 'center';
-                    cell.style.backgroundColor = '#000000';
-                    cell.id = 'mem-' + i;
-                    memoryGrid.appendChild(cell);
-                }
-            }
-            for (let i = 0; i < 256; i++) {
-                const cell = document.getElementById('mem-' + i);
-                if (cell) {
-                    cell.textContent = emulator.cpu.memory[i].toString(16).padStart(2, '0').toUpperCase();
-                }
-            }
-        }
-
-        // Speed slider
-        const speedSlider = document.getElementById('speedSlider');
-        if (speedSlider) {
-            speedSlider.addEventListener('change', (e) => {
-                if (emulator) {
-                    emulator.setSpeed(parseInt(e.target.value));
-                }
-            });
-        }
-
-        // Initialize on page load
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeTerminal);
-        } else {
-            // DOM is already ready
-            initializeTerminal();
-        }
+        // Start
+        init();
     </script>
 </body>
 </html>
