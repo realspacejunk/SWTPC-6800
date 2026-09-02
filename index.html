@@ -278,11 +278,25 @@
 
         // Handle input - attach BEFORE init
         function setupInput() {
+            console.log('Setting up input...');
+            
+            // Make input visible and ensure it's in DOM
+            if (!commandInput) {
+                printLine('ERROR: Command input element not found!');
+                return;
+            }
+            
+            printLine('DEBUG: Input element found, attaching listeners...');
+            
+            commandInput.addEventListener('keydown', (e) => {
+                printLine('DEBUG: keydown - ' + e.key);
+            });
+            
             commandInput.addEventListener('keypress', (e) => {
-                console.log('Keypress event:', e.key);
+                printLine('DEBUG: keypress - ' + e.key);
                 if (e.key === 'Enter') {
                     const message = commandInput.value.toUpperCase().trim();
-                    console.log('Message:', message);
+                    printLine('DEBUG: Message entered - ' + message);
                     
                     if (message) {
                         printLine('> ' + message);
@@ -298,16 +312,24 @@
                 }
             });
             
-            console.log('Input handler attached');
+            commandInput.addEventListener('input', (e) => {
+                printLine('DEBUG: input event - value: ' + commandInput.value);
+            });
+            
+            printLine('DEBUG: Input handlers attached');
         }
 
         // Initialize
         function init() {
             try {
+                printLine('DEBUG: Creating emulator...');
                 emulator = new Emulator();
+                printLine('DEBUG: Initializing emulator...');
                 emulator.init();
+                printLine('DEBUG: Emulator ready');
             } catch (e) {
-                console.error('Emulator init error:', e);
+                printLine('ERROR: ' + e.message);
+                printLine('Stack: ' + e.stack);
             }
             
             printLine('SWTPC-6800 ELIZA THERAPIST v1.0');
@@ -315,7 +337,7 @@
             printLine('');
             
             commandInput.focus();
-            console.log('Input focused, ready');
+            printLine('DEBUG: Input focused');
         }
 
         // ELIZA response handler
