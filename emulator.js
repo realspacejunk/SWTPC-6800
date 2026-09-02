@@ -376,9 +376,14 @@ class Emulator {
         }
         
         this.running = true;
-        document.getElementById('runBtn').disabled = true;
-        document.getElementById('pauseBtn').disabled = false;
-        document.getElementById('stepBtn').disabled = true;
+        
+        // Safely update buttons if they exist
+        const runBtn = document.getElementById('runBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const stepBtn = document.getElementById('stepBtn');
+        if (runBtn) runBtn.disabled = true;
+        if (pauseBtn) pauseBtn.disabled = false;
+        if (stepBtn) stepBtn.disabled = true;
         
         this.runInterval = setInterval(() => {
             const stepsPerFrame = Math.max(1, Math.floor(100 * (this.speed / 100)));
@@ -402,9 +407,15 @@ class Emulator {
             clearInterval(this.runInterval);
             this.runInterval = null;
         }
-        document.getElementById('runBtn').disabled = false;
-        document.getElementById('pauseBtn').disabled = true;
-        document.getElementById('stepBtn').disabled = false;
+        
+        // Safely update buttons if they exist
+        const runBtn = document.getElementById('runBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const stepBtn = document.getElementById('stepBtn');
+        if (runBtn) runBtn.disabled = false;
+        if (pauseBtn) pauseBtn.disabled = true;
+        if (stepBtn) stepBtn.disabled = false;
+        
         this.updateDisplay();
     }
     
@@ -424,6 +435,8 @@ class Emulator {
      */
     print(text) {
         const output = document.getElementById('output');
+        if (!output) return;
+        
         const line = document.createElement('div');
         line.className = 'output-line';
         line.textContent += text;
@@ -443,9 +456,16 @@ class Emulator {
         this.inputPtr = 0;
         this.conversation = [];
         this.currentOutput = '';
-        document.getElementById('output').innerHTML = '';
-        document.getElementById('conversation').innerHTML = '';
-        document.getElementById('userInput').focus();
+        
+        const output = document.getElementById('output');
+        if (output) output.innerHTML = '';
+        
+        const conversation = document.getElementById('conversation');
+        if (conversation) conversation.innerHTML = '';
+        
+        const userInput = document.getElementById('commandInput');
+        if (userInput) userInput.focus();
+        
         this.updateDisplay();
     }
     
@@ -454,24 +474,31 @@ class Emulator {
      */
     setSpeed(value) {
         this.speed = parseInt(value);
-        document.getElementById('speedValue').textContent = value + '%';
+        const speedValue = document.getElementById('speedValue');
+        if (speedValue) speedValue.textContent = value + '%';
     }
     
     /**
      * Update display
      */
     updateDisplay() {
-        this.updateRegisters();
-        this.updateDisassembly();
-        this.updateMemory();
-        this.updateStats();
+        // Only update if display elements exist
+        if (document.getElementById('regA')) {
+            this.updateRegisters();
+            this.updateDisassembly();
+            this.updateMemory();
+            this.updateStats();
+        }
     }
     
     /**
      * Update register display
      */
     updateRegisters() {
-        document.getElementById('regA').textContent = `0x${this.cpu.A.toString(16).padStart(2, '0')}`;
+        const regA = document.getElementById('regA');
+        if (!regA) return;
+        
+        regA.textContent = `0x${this.cpu.A.toString(16).padStart(2, '0')}`;
         document.getElementById('regB').textContent = `0x${this.cpu.B.toString(16).padStart(2, '0')}`;
         document.getElementById('regX').textContent = `0x${this.cpu.X.toString(16).padStart(4, '0')}`;
         document.getElementById('regPC').textContent = `0x${this.cpu.PC.toString(16).padStart(4, '0')}`;
