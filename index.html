@@ -1,9 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SWTPC-6800 ELIZA</title>
+    <title>SWTPC-6800 ELIZA - Retro CRT Terminal</title>
     <style>
         * {
             margin: 0;
@@ -11,50 +11,67 @@
             box-sizing: border-box;
         }
 
+        html, body {
+            width: 100%;
+            height: 100%;
+            background-color: #000000;
+            font-family: 'Courier New', 'Courier', monospace;
+        }
+
         body {
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            background-color: #000;
-            font-family: 'Courier New', monospace;
             padding: 20px;
         }
 
-        /* CRT Monitor Bezel */
-        .crt-bezel {
+        /* CRT Monitor Bezel - Physical Monitor Frame */
+        .monitor-bezel {
             width: 100%;
             max-width: 960px;
             aspect-ratio: 4 / 3;
             background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%);
-            border: 30px solid #2a2a2a;
-            border-radius: 20px;
+            border: 40px solid #2a2a2a;
+            border-radius: 25px;
             box-shadow: 
-                0 0 60px rgba(0, 0, 0, 0.8),
-                inset 0 0 60px rgba(0, 0, 0, 0.8),
-                0 20px 40px rgba(0, 0, 0, 0.9);
+                0 0 80px rgba(0, 0, 0, 0.95),
+                inset 0 0 80px rgba(0, 0, 0, 0.9),
+                0 30px 60px rgba(0, 0, 0, 0.95),
+                inset 0 -2px 5px rgba(255, 255, 255, 0.1),
+                inset 0 2px 5px rgba(0, 0, 0, 0.5);
             display: flex;
             overflow: hidden;
             position: relative;
         }
 
-        /* CRT Screen */
-        .crt-screen {
+        /* CRT Glass/Screen Surface */
+        .screen-glass {
             flex: 1;
-            background-color: #000;
+            position: relative;
+            background-color: #000000;
             display: flex;
             flex-direction: column;
-            padding: 30px;
             overflow: hidden;
-            position: relative;
-            color: #00ff00;
-            text-shadow: 0 0 10px #00ff00, 0 0 20px #00ff0088;
-            line-height: 1.4;
-            font-size: clamp(11px, 2vw, 16px);
         }
 
-        /* Scanlines effect */
-        .crt-screen::before {
+        /* Main display area */
+        .crt-display {
+            flex: 1;
+            padding: 35px;
+            background-color: #000000;
+            color: #00ff00;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-y: auto;
+            position: relative;
+            z-index: 50;
+            text-shadow: 0 0 5px #00ff00;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Scanlines - CRT horizontal lines */
+        .crt-display::before {
             content: '';
             position: absolute;
             top: 0;
@@ -63,8 +80,8 @@
             bottom: 0;
             background: repeating-linear-gradient(
                 0deg,
-                rgba(0, 0, 0, 0.15),
-                rgba(0, 0, 0, 0.15) 1px,
+                rgba(0, 0, 0, 0.20),
+                rgba(0, 0, 0, 0.20) 1px,
                 transparent 1px,
                 transparent 2px
             );
@@ -72,270 +89,296 @@
             z-index: 100;
         }
 
-        /* Phosphor glow */
-        .crt-screen::after {
+        /* Phosphor glow - edge darkening */
+        .crt-display::after {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.3) 100%);
+            background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.4) 100%);
             pointer-events: none;
             z-index: 101;
         }
 
-        /* Content wrapper */
-        .crt-content {
+        /* Content - sits above scanlines */
+        .display-content {
             position: relative;
             z-index: 50;
             display: flex;
             flex-direction: column;
             height: 100%;
-            color: #00ff00;
         }
 
         /* Header */
-        .crt-header {
+        .screen-header {
             text-align: center;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #00ff00;
-            padding-bottom: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #00ff00;
+            line-height: 1.2;
+        }
+
+        .screen-header h1 {
+            font-size: 18px;
             font-weight: bold;
+            letter-spacing: 3px;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+            margin: 0;
+        }
+
+        .screen-header .model {
+            font-size: 12px;
+            color: #00ff00;
+            opacity: 0.7;
+            margin-top: 5px;
             letter-spacing: 2px;
         }
 
-        .crt-header h1 {
-            font-size: 1.2em;
-            margin: 0;
+        /* Scrollable conversation area */
+        .conversation-display {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            padding-right: 5px;
             color: #00ff00;
         }
 
-        .crt-header p {
-            font-size: 0.8em;
-            opacity: 0.7;
-            margin: 5px 0 0 0;
+        .conversation-display::-webkit-scrollbar {
+            width: 6px;
         }
 
-        /* Conversation area */
-        .crt-conversation {
-            flex: 1;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            padding-right: 5px;
-            scrollbar-width: thin;
-            scrollbar-color: #00ff00 #000;
+        .conversation-display::-webkit-scrollbar-track {
+            background: #000000;
         }
 
-        .crt-conversation::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        .crt-conversation::-webkit-scrollbar-track {
-            background: #000;
-        }
-
-        .crt-conversation::-webkit-scrollbar-thumb {
+        .conversation-display::-webkit-scrollbar-thumb {
             background: #00ff00;
+            border-radius: 3px;
         }
 
-        /* Conversation lines */
-        .crt-line {
-            margin: 3px 0;
+        /* Each line in conversation */
+        .display-line {
+            margin: 2px 0;
             white-space: pre-wrap;
             word-wrap: break-word;
+            color: #00ff00;
+            font-size: 13px;
+            line-height: 1.4;
         }
 
-        .crt-line.system {
-            opacity: 0.7;
+        .display-line.system {
+            opacity: 0.6;
             font-style: italic;
         }
 
-        .crt-line.user {
-            color: #00ff00;
+        .display-line.user {
             font-weight: bold;
-        }
-
-        .crt-line.eliza {
             color: #00ff00;
         }
 
-        .crt-line.prompt {
+        .display-line.eliza {
+            color: #00ff00;
+        }
+
+        /* Input line */
+        .input-line {
+            border-top: 2px solid #00ff00;
+            padding-top: 12px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .prompt {
             color: #00ff00;
             font-weight: bold;
+            flex-shrink: 0;
+            font-size: 13px;
+        }
+
+        #textInput {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            caret-color: #00ff00;
+        }
+
+        #textInput::placeholder {
+            color: #00ff00;
+            opacity: 0.4;
+        }
+
+        #textInput:focus {
+            text-shadow: 0 0 5px #00ff00;
         }
 
         /* Blinking cursor */
-        .crt-cursor {
-            display: inline-block;
+        .cursor {
             width: 8px;
-            height: 1em;
+            height: 1.4em;
             background-color: #00ff00;
-            animation: blink 0.7s infinite;
-            margin-left: 2px;
+            display: inline-block;
+            animation: cursor-blink 0.7s infinite;
+            margin-left: 3px;
+            flex-shrink: 0;
         }
 
-        @keyframes blink {
+        @keyframes cursor-blink {
             0%, 49% { opacity: 1; }
             50%, 100% { opacity: 0; }
         }
 
-        /* Input section */
-        .crt-input-area {
-            border-top: 1px solid #00ff00;
-            padding-top: 10px;
-            display: flex;
-            gap: 5px;
+        #textInput:focus ~ .cursor {
+            display: none;
         }
 
-        .crt-input-area span {
-            color: #00ff00;
-            font-weight: bold;
-            flex-shrink: 0;
-        }
-
-        #userInput {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: #00ff00;
-            font-family: 'Courier New', monospace;
-            outline: none;
-            font-size: inherit;
-        }
-
-        #userInput::placeholder {
-            color: #00ff00;
-            opacity: 0.5;
-        }
-
-        #userInput:focus {
-            text-shadow: 0 0 10px #00ff00;
-        }
-
-        /* Dev mode toggle */
-        .dev-toggle {
+        /* Dev mode button - subtle */
+        .dev-button {
             position: fixed;
-            bottom: 10px;
-            left: 10px;
-            padding: 5px 10px;
-            background-color: #003300;
+            bottom: 15px;
+            left: 15px;
+            padding: 6px 12px;
+            background-color: #001100;
             color: #00ff00;
             border: 1px solid #00ff00;
             cursor: pointer;
             font-family: 'Courier New', monospace;
             font-size: 10px;
-            opacity: 0.5;
+            opacity: 0.4;
             z-index: 1000;
+            letter-spacing: 1px;
         }
 
-        .dev-toggle:hover {
-            opacity: 1;
+        .dev-button:hover {
+            opacity: 0.8;
         }
 
-        /* Hidden dev panels */
-        .dev-panels {
+        /* Dev panels - full screen overlay */
+        .dev-overlay {
             display: none;
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: #000;
+            background: #000000;
             z-index: 999;
-            overflow: auto;
-            padding: 10px;
+            overflow-y: auto;
+            padding: 20px;
             color: #00ff00;
         }
 
-        .dev-panels.visible {
+        .dev-overlay.active {
             display: block;
         }
 
-        .dev-panel {
+        .dev-overlay button {
+            padding: 6px 12px;
+            background-color: #001100;
+            color: #00ff00;
             border: 1px solid #00ff00;
-            padding: 10px;
-            margin-bottom: 10px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            margin: 3px;
+            opacity: 0.8;
+        }
+
+        .dev-overlay button:hover {
+            opacity: 1;
+            background-color: #003300;
+        }
+
+        .dev-section {
+            border: 1px solid #00ff00;
+            padding: 12px;
+            margin-bottom: 15px;
             background-color: #0a0a0a;
         }
 
-        .dev-panel h3 {
-            margin-bottom: 5px;
+        .dev-section h3 {
             font-size: 12px;
+            margin-bottom: 8px;
+            text-decoration: underline;
         }
 
         .dev-close {
             position: fixed;
             top: 10px;
             right: 10px;
-            padding: 5px 10px;
-            background-color: #003300;
+            padding: 6px 12px;
+            background-color: #001100;
             color: #00ff00;
             border: 1px solid #00ff00;
             cursor: pointer;
-            font-family: monospace;
-            z-index: 1000;
+            font-family: 'Courier New', monospace;
+            z-index: 1001;
         }
 
         .dev-close:hover {
             background-color: #00ff00;
-            color: #000;
+            color: #000000;
         }
     </style>
 </head>
 <body>
-    <!-- CRT Monitor Display -->
-    <div class="crt-bezel">
-        <div class="crt-screen">
-            <div class="crt-content">
-                <div class="crt-header">
-                    <h1>SWTPC-6800 ELIZA</h1>
-                    <p>Therapist v1.0</p>
-                </div>
+    <!-- Main CRT Monitor -->
+    <div class="monitor-bezel">
+        <div class="screen-glass">
+            <div class="crt-display">
+                <div class="display-content">
+                    <div class="screen-header">
+                        <h1>SWTPC-6800 ELIZA</h1>
+                        <div class="model">THERAPIST v1.0</div>
+                    </div>
 
-                <div class="crt-conversation" id="conversationLog">
-                    <div class="crt-line system">Welcome to ELIZA on SWTPC-6800</div>
-                    <div class="crt-line system">-----------------------------------</div>
-                </div>
+                    <div class="conversation-display" id="display">
+                        <div class="display-line system">Welcome to ELIZA v1.0 on SWTPC-6800</div>
+                        <div class="display-line system">=====================================</div>
+                    </div>
 
-                <div class="crt-input-area">
-                    <span>YOU:</span>
-                    <input type="text" id="userInput" placeholder="your thoughts">
-                    <span id="cursor" class="crt-cursor"></span>
+                    <div class="input-line">
+                        <span class="prompt">YOU:</span>
+                        <input type="text" id="textInput" placeholder="Enter your thoughts...">
+                        <span class="cursor"></span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Developer Mode Toggle -->
-    <button class="dev-toggle" onclick="toggleDevMode()">DEV</button>
+    <!-- Dev Mode Button -->
+    <button class="dev-button" onclick="toggleDevMode()">[ DEV ]</button>
 
-    <!-- Hidden Developer Panels -->
-    <div class="dev-panels" id="devPanels">
-        <button class="dev-close" onclick="toggleDevMode()">CLOSE DEV</button>
+    <!-- Dev Mode Overlay -->
+    <div class="dev-overlay" id="devOverlay">
+        <button class="dev-close" onclick="toggleDevMode()">CLOSE</button>
 
-        <div class="dev-panel">
-            <h3>CPU Controls</h3>
-            <button onclick="emulator.run()">▶ Run</button>
-            <button onclick="emulator.pause()">⏸ Pause</button>
-            <button onclick="emulator.step()">⏭ Step</button>
-            <button onclick="emulator.reset()">🔄 Reset</button>
-            <label>Speed: <input type="range" id="speedSlider" min="1" max="100" value="50" style="width: 100px;"></label>
+        <div class="dev-section">
+            <h3>CPU CONTROLS</h3>
+            <button onclick="emulator.run()">▶ RUN</button>
+            <button onclick="emulator.pause()">⏸ PAUSE</button>
+            <button onclick="emulator.step()">⏭ STEP</button>
+            <button onclick="emulator.reset()">🔄 RESET</button>
+            <br><br>
+            Speed: <input type="range" id="speedSlider" min="1" max="100" value="50" style="width: 150px;">
         </div>
 
-        <div class="dev-panel">
-            <h3>CPU State</h3>
-            <div id="cpuState" style="font-size: 11px; font-family: monospace;"></div>
+        <div class="dev-section">
+            <h3>CPU STATE</h3>
+            <div id="cpuState" style="font-size: 11px; font-family: monospace; line-height: 1.6;"></div>
         </div>
 
-        <div class="dev-panel">
-            <h3>Memory (0x00-0xFF)</h3>
-            <div id="memoryGrid" style="display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; font-size: 9px;"></div>
-        </div>
-
-        <div class="dev-panel">
-            <h3>Disassembly</h3>
-            <div id="disassembly" style="font-size: 10px; max-height: 200px; overflow-y: auto;"></div>
+        <div class="dev-section">
+            <h3>MEMORY GRID (0x00-0xFF)</h3>
+            <div id="memoryGrid" style="display: grid; grid-template-columns: repeat(16, 1fr); gap: 1px; font-size: 9px;"></div>
         </div>
     </div>
 
@@ -343,99 +386,83 @@
     <script src="eliza.js"></script>
     <script src="emulator.js"></script>
     <script>
+        // Initialize emulator
         const emulator = new Emulator();
         emulator.init();
 
-        const conversationLog = document.getElementById('conversationLog');
-        const userInput = document.getElementById('userInput');
-        const cursor = document.getElementById('cursor');
+        const display = document.getElementById('display');
+        const textInput = document.getElementById('textInput');
+        const cursor = document.querySelector('.cursor');
+        const devOverlay = document.getElementById('devOverlay');
 
-        // Hide cursor when typing
-        userInput.addEventListener('focus', () => {
-            cursor.style.display = 'none';
-        });
+        // Focus input on page load
+        setTimeout(() => {
+            textInput.focus();
+        }, 100);
 
-        userInput.addEventListener('blur', () => {
-            cursor.style.display = 'inline-block';
+        // Handle input
+        textInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const message = textInput.value.trim();
+                if (message) {
+                    addLine('user', message);
+                    emulator.sendInput(message);
+                    textInput.value = '';
+                    textInput.focus();
+                }
+            }
         });
 
         // Speed control
         const speedSlider = document.getElementById('speedSlider');
         if (speedSlider) {
             speedSlider.addEventListener('change', (e) => {
-                const speed = parseInt(e.target.value);
-                emulator.setSpeed(speed);
+                emulator.setSpeed(parseInt(e.target.value));
             });
         }
 
-        function sendMessage() {
-            const message = userInput.value.trim();
-            if (message) {
-                addConversationLine('user', message);
-                emulator.sendInput(message);
-                userInput.value = '';
-                userInput.focus();
-            }
-        }
-
-        userInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
-            }
-        });
-
-        function addConversationLine(role, text) {
+        // Add line to display
+        function addLine(type, text) {
             const line = document.createElement('div');
-            line.className = `crt-line ${role}`;
+            line.className = 'display-line ' + type;
             
-            if (role === 'user') {
-                line.textContent = `YOU: ${text}`;
-            } else if (role === 'eliza') {
-                line.textContent = `ELIZA: ${text}`;
+            if (type === 'user') {
+                line.textContent = 'YOU: ' + text;
+            } else if (type === 'eliza') {
+                line.textContent = 'ELIZA: ' + text;
             } else {
                 line.textContent = text;
-                line.classList.add('system');
             }
             
-            conversationLog.appendChild(line);
-            conversationLog.scrollTop = conversationLog.scrollHeight;
+            display.appendChild(line);
+            display.scrollTop = display.scrollHeight;
         }
 
         // ELIZA output handler
         window.onELIZAOutput = (text) => {
-            addConversationLine('eliza', text);
+            addLine('eliza', text);
         };
 
         // Dev mode toggle
         function toggleDevMode() {
-            const devPanels = document.getElementById('devPanels');
-            devPanels.classList.toggle('visible');
+            devOverlay.classList.toggle('active');
+            if (devOverlay.classList.contains('active')) {
+                updateDevDisplay();
+            }
         }
-
-        // Auto-focus input
-        setTimeout(() => {
-            userInput.focus();
-        }, 100);
 
         // Update dev panels
         setInterval(() => {
-            if (document.getElementById('devPanels').classList.contains('visible')) {
-                updateDevPanels();
+            if (devOverlay.classList.contains('active')) {
+                updateDevDisplay();
             }
         }, 100);
 
-        function updateDevPanels() {
-            // CPU State
+        function updateDevDisplay() {
             const cpu = emulator.cpu;
-            document.getElementById('cpuState').innerHTML = `
-PC: $${cpu.pc.toString(16).padStart(4, '0')} | 
-A: $${cpu.a.toString(16).padStart(2, '0')} | 
-B: $${cpu.b.toString(16).padStart(2, '0')} | 
-X: $${cpu.x.toString(16).padStart(4, '0')}<br>
-SP: $${cpu.sp.toString(16).padStart(4, '0')} | 
-CC: $${cpu.cc.toString(16).padStart(2, '0')} | 
-Instructions: ${cpu.instructionCount}
-            `;
+            
+            // CPU State
+            document.getElementById('cpuState').innerHTML = `PC: $${cpu.pc.toString(16).padStart(4, '0')} | A: $${cpu.a.toString(16).padStart(2, '0')} | B: $${cpu.b.toString(16).padStart(2, '0')} | X: $${cpu.x.toString(16).padStart(4, '0')}<br>SP: $${cpu.sp.toString(16).padStart(4, '0')} | CC: $${cpu.cc.toString(16).padStart(2, '0')} | Instructions: ${cpu.instructionCount}`;
 
             // Memory grid
             const memoryGrid = document.getElementById('memoryGrid');
@@ -445,14 +472,15 @@ Instructions: ${cpu.instructionCount}
                     cell.style.border = '1px solid #003300';
                     cell.style.padding = '2px';
                     cell.style.textAlign = 'center';
-                    cell.id = `mem-${i}`;
+                    cell.style.backgroundColor = '#0a0a0a';
+                    cell.id = 'mem-' + i;
                     memoryGrid.appendChild(cell);
                 }
             }
             for (let i = 0; i < 256; i++) {
-                const cell = document.getElementById(`mem-${i}`);
+                const cell = document.getElementById('mem-' + i);
                 if (cell) {
-                    cell.textContent = emulator.cpu.memory[i].toString(16).padStart(2, '0');
+                    cell.textContent = emulator.cpu.memory[i].toString(16).padStart(2, '0').toUpperCase();
                 }
             }
         }
