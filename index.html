@@ -299,8 +299,10 @@
 
         let emulator = null;
 
-        // Initialize
-        window.addEventListener('load', () => {
+        // Initialize immediately
+        function initializeTerminal() {
+            if (!output || !commandInput) return;
+            
             emulator = new Emulator();
             emulator.init();
             
@@ -311,29 +313,37 @@
             
             // Focus input
             commandInput.focus();
-        });
+            
+            // Start emulator running
+            emulator.run();
+        }
 
         // Handle input
-        commandInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                const command = commandInput.value.toUpperCase().trim();
-                
-                if (command) {
-                    // Echo user input
-                    printOutput('> ' + command, 'command');
+        if (commandInput) {
+            commandInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    const command = commandInput.value.toUpperCase().trim();
                     
-                    // Send to ELIZA
-                    emulator.sendInput(command);
+                    if (command) {
+                        // Echo user input
+                        printOutput('> ' + command, 'command');
+                        
+                        // Send to ELIZA
+                        if (emulator) {
+                            emulator.sendInput(command);
+                        }
+                        
+                        // Clear input
+                        commandInput.value = '';
+                    }
                     
-                    // Clear input
-                    commandInput.value = '';
+                    e.preventDefault();
                 }
-                
-                e.preventDefault();
-            }
-        });
+            });
+        }
 
         function printOutput(text, type = 'response') {
+            if (!output) return;
             const line = document.createElement('div');
             line.className = 'output-line ' + type;
             line.textContent = text;
@@ -409,6 +419,14 @@
                     emulator.setSpeed(parseInt(e.target.value));
                 }
             });
+        }
+
+        // Initialize on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeTerminal);
+        } else {
+            // DOM is already ready
+            initializeTerminal();
         }
     </script>
 </body>
