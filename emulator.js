@@ -14,6 +14,9 @@ class Emulator {
         // Embed the binary data from ELIZA tape
         this.elizaBinary = this.getELIZABinary();
         
+        // ELIZA chatbot engine
+        this.eliza = new ELIZA();
+        
         // Input handling
         this.inputBuffer = [];
         this.inputPtr = 0;
@@ -62,6 +65,12 @@ class Emulator {
         // Clear input field
         inputField.value = '';
         inputField.focus();
+        
+        // Generate ELIZA response
+        setTimeout(() => {
+            const response = this.eliza.getResponse(message);
+            this.addConversationLine(response, false);
+        }, 300);
         
         // Start emulator if not running
         if (!this.running && !this.cpu.halted) {
